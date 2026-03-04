@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { mockDatabases, DatabaseInstance, DatabaseStatus } from "@/data/mockData";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import RefreshIndicator from "@/components/RefreshIndicator";
@@ -127,10 +128,12 @@ const DashboardPage = () => {
 
 const DatabaseCard = ({ db, index }: { db: DatabaseInstance; index: number }) => {
   const cfg = statusConfig[db.status];
+  const navigate = useNavigate();
   return (
     <div
-      className="glass rounded-lg p-5 hover:neon-border transition-all animate-slide-up"
+      className="glass rounded-lg p-5 hover:neon-border transition-all animate-slide-up cursor-pointer"
       style={{ animationDelay: `${index * 30}ms` }}
+      onClick={() => navigate(`/databases/${db.id}`)}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">

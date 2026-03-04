@@ -36,7 +36,7 @@ const LoginPage = () => {
             <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center mb-4 glow-primary">
               <Database className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold neon-text font-mono">DB Monitor</h1>
+            <h1 className="text-2xl font-bold neon-text font-mono">DB Sentinela</h1>
             <p className="text-muted-foreground text-sm mt-1">Database Operations Center</p>
           </div>
 
