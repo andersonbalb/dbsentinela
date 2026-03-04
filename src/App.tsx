@@ -10,6 +10,9 @@ import AlertsPage from "./pages/AlertsPage";
 import SlowQueriesPage from "./pages/SlowQueriesPage";
 import DatabasesPage from "./pages/DatabasesPage";
 import ThresholdsPage from "./pages/ThresholdsPage";
+import ServersPage from "./pages/ServersPage";
+import ZabbixConfigPage from "./pages/ZabbixConfigPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import AppSidebar from "./components/AppSidebar";
 import NotFound from "./pages/NotFound";
 
@@ -32,10 +35,13 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
       <Route path="/" element={<ProtectedLayout><DashboardPage /></ProtectedLayout>} />
+      <Route path="/servers" element={<ProtectedLayout><ServersPage /></ProtectedLayout>} />
       <Route path="/alerts" element={<ProtectedLayout><AlertsPage /></ProtectedLayout>} />
       <Route path="/slow-queries" element={<ProtectedLayout><SlowQueriesPage /></ProtectedLayout>} />
       <Route path="/databases" element={<ProtectedLayout><DatabasesPage /></ProtectedLayout>} />
       <Route path="/thresholds" element={<ProtectedLayout><ThresholdsPage /></ProtectedLayout>} />
+      <Route path="/zabbix" element={<ProtectedLayout><ZabbixConfigPage /></ProtectedLayout>} />
+      <Route path="/notifications" element={<ProtectedLayout><NotificationsPage /></ProtectedLayout>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
