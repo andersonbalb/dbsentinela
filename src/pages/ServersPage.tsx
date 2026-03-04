@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { mockServers, ServerInstance } from "@/data/mockServersData";
 import { DatabaseStatus } from "@/data/mockData";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
@@ -23,6 +24,7 @@ const ProgressBar = ({ value, max, warn = 70, crit = 90 }: { value: number; max:
 };
 
 const ServersPage = () => {
+  const navigate = useNavigate();
   const { lastUpdated, isRefreshing, countdown, refreshKey, triggerRefresh } = useAutoRefresh(30);
   const [filter, setFilter] = useState<DatabaseStatus | "all">("all");
 
@@ -97,7 +99,7 @@ const ServersPage = () => {
           const memPct = Math.round((srv.memoryUsed / srv.memoryTotal) * 100);
           const diskPct = Math.round((srv.diskUsed / srv.diskTotal) * 100);
           return (
-            <div key={srv.id} className="glass rounded-lg p-5 hover:neon-border transition-all animate-slide-up" style={{ animationDelay: `${i * 30}ms` }}>
+            <div key={srv.id} className="glass rounded-lg p-5 hover:neon-border transition-all animate-slide-up cursor-pointer" style={{ animationDelay: `${i * 30}ms` }} onClick={() => navigate(`/servers/${srv.id}`)}>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className={cfg.dotClass} />

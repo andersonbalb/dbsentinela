@@ -32,7 +32,7 @@ const AppSidebar = () => {
           <Database className="w-4 h-4 text-primary" />
         </div>
         {!collapsed && (
-          <span className="font-bold font-mono text-primary text-sm neon-text">DB Monitor</span>
+          <span className="font-bold font-mono text-primary text-sm neon-text">DB Sentinela</span>
         )}
       </div>
 
