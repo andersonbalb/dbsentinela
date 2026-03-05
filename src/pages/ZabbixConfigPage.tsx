@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { mockZabbixInstances, ZabbixInstance } from "@/data/mockServersData";
-import { Plus, Trash2, Edit2, X, Save, RefreshCw, Wifi, WifiOff, AlertCircle, ExternalLink } from "lucide-react";
+import { validateZabbixConfig, testZabbixConnection, encryptToken, ZabbixValidationResult } from "@/services/zabbixIntegration";
+import { useZabbixSync, SyncStatus } from "@/hooks/useZabbixSync";
+import {
+  Plus, Trash2, Edit2, X, Save, RefreshCw, Wifi, WifiOff, AlertCircle,
+  ExternalLink, Shield, CheckCircle2, XCircle, Clock, Activity, Loader2
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 const emptyZabbix: Omit<ZabbixInstance, "id" | "status" | "lastSync" | "hostsMonitored"> = {
-  name: "",
-  url: "",
-  apiUser: "",
-  apiToken: "",
-  version: "",
+  name: "", url: "", apiUser: "", apiToken: "", version: "",
 };
 
 const statusIcons: Record<ZabbixInstance["status"], { icon: typeof Wifi; color: string; label: string }> = {
@@ -25,27 +26,63 @@ const ZabbixConfigPage = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyZabbix);
   const [showToken, setShowToken] = useState(false);
+  const [validation, setValidation] = useState<ZabbixValidationResult>({ valid: true, errors: {} });
+  const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    if (!form.name || !form.url || !form.apiUser) {
-      toast.error("Preencha todos os campos obrigatórios.");
+  // Background sync
+  const syncConfigs = instances.filter((z) => z.status === "connected").map((z) => ({
+    url: z.url, apiUser: z.apiUser, apiToken: z.apiToken, version: z.version,
+  }));
+  const syncStatus = useZabbixSync({ configs: syncConfigs, intervalMinutes: 5, enabled: true });
+
+  // Auto-validate on form changes
+  useEffect(() => {
+    if (!showForm) return;
+    const timer = setTimeout(() => {
+      const result = validateZabbixConfig({ url: form.url, apiUser: form.apiUser, apiToken: form.apiToken });
+      setValidation(result);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [form.url, form.apiUser, form.apiToken, showForm]);
+
+  const handleSave = async () => {
+    const result = validateZabbixConfig({ url: form.url, apiUser: form.apiUser, apiToken: form.apiToken });
+    setValidation(result);
+    if (!result.valid) {
+      toast.error("Corrija os erros de validação antes de salvar.");
       return;
     }
+
+    setIsSaving(true);
+    // Encrypt token
+    const encryptedToken = await encryptToken(form.apiToken);
+
     if (editId) {
-      setInstances((prev) => prev.map((z) => z.id === editId ? { ...z, ...form } : z));
-      toast.success("Instância Zabbix atualizada!");
+      setInstances((prev) => prev.map((z) => z.id === editId ? { ...z, ...form, apiToken: encryptedToken } : z));
+      toast.success("Instância Zabbix atualizada!", { description: "Token criptografado com AES-256.", icon: <Shield className="w-4 h-4 text-success" /> });
     } else {
       const newZ: ZabbixInstance = {
-        ...form,
-        id: `zbx-${Date.now()}`,
-        status: "disconnected",
-        lastSync: new Date().toISOString(),
-        hostsMonitored: 0,
+        ...form, apiToken: encryptedToken, id: `zbx-${Date.now()}`, status: "disconnected", lastSync: new Date().toISOString(), hostsMonitored: 0,
       };
       setInstances((prev) => [...prev, newZ]);
-      toast.success("Instância Zabbix cadastrada!");
+      toast.success("Instância Zabbix cadastrada!", { description: "Credenciais armazenadas com criptografia AES-256.", icon: <Shield className="w-4 h-4 text-success" /> });
     }
+    setIsSaving(false);
     resetForm();
+  };
+
+  const handleTestConnection = async (z: ZabbixInstance) => {
+    setIsTesting(true);
+    const result = await testZabbixConnection({ url: z.url, apiUser: z.apiUser, apiToken: z.apiToken });
+    if (result.success) {
+      setInstances((prev) => prev.map((x) => x.id === z.id ? { ...x, status: "connected", lastSync: new Date().toISOString(), version: result.version || x.version } : x));
+      toast.success("Conexão estabelecida com sucesso!", { icon: <CheckCircle2 className="w-4 h-4 text-success" /> });
+    } else {
+      setInstances((prev) => prev.map((x) => x.id === z.id ? { ...x, status: "error" } : x));
+      toast.error(`Falha na conexão: ${result.error}`, { icon: <XCircle className="w-4 h-4 text-destructive" /> });
+    }
+    setIsTesting(false);
   };
 
   const handleEdit = (z: ZabbixInstance) => {
@@ -59,45 +96,90 @@ const ZabbixConfigPage = () => {
     toast.info("Instância removida.");
   };
 
-  const handleTestConnection = (id: string) => {
-    setInstances((prev) => prev.map((z) => z.id === id ? { ...z, status: "connected", lastSync: new Date().toISOString() } : z));
-    toast.success("Conexão testada com sucesso!");
-  };
-
   const resetForm = () => {
     setForm(emptyZabbix);
     setEditId(null);
     setShowForm(false);
     setShowToken(false);
+    setValidation({ valid: true, errors: {} });
+  };
+
+  const FieldError = ({ field }: { field: string }) => {
+    const error = validation.errors[field];
+    if (!error) return null;
+    return <p className="text-xs text-destructive mt-1 animate-slide-up flex items-center gap-1"><XCircle className="w-3 h-3" />{error}</p>;
+  };
+
+  const fieldOk = (field: string) => {
+    const value = form[field as keyof typeof form];
+    return value && typeof value === "string" && value.trim().length > 0 && !validation.errors[field];
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold font-mono neon-text">Configuração Zabbix</h1>
-          <p className="text-muted-foreground text-sm">Gerencie as instâncias Zabbix que alimentam o monitoramento</p>
+          <p className="text-muted-foreground text-sm">Gerencie instâncias Zabbix • Criptografia AES-256 ativa</p>
         </div>
-        <Button onClick={() => { resetForm(); setShowForm(true); }} className="bg-primary text-primary-foreground hover:bg-primary/90 glow-primary">
-          <Plus className="w-4 h-4 mr-2" /> Nova Instância
-        </Button>
+        <div className="flex gap-3">
+          <button onClick={() => syncStatus.runSync()} disabled={syncStatus.isRunning} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-info/10 text-info hover:bg-info/20 transition-colors disabled:opacity-50">
+            <RefreshCw className={`w-3.5 h-3.5 ${syncStatus.isRunning ? "animate-spin-slow" : ""}`} /> Sync Agora
+          </button>
+          <Button onClick={() => { resetForm(); setShowForm(true); }} className="bg-primary text-primary-foreground hover:bg-primary/90 glow-primary">
+            <Plus className="w-4 h-4 mr-2" /> Nova Instância
+          </Button>
+        </div>
+      </div>
+
+      {/* Sync Status Banner */}
+      <div className="glass rounded-lg p-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-md ${syncStatus.isRunning ? "bg-info/10" : "bg-success/10"}`}>
+            <Activity className={`w-4 h-4 ${syncStatus.isRunning ? "text-info animate-pulse" : "text-success"}`} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold font-mono">Background Sync</p>
+            <p className="text-xs text-muted-foreground">
+              {syncStatus.isRunning ? "Sincronizando..." :
+                syncStatus.lastSync ? `Último sync: ${syncStatus.lastSync.toLocaleTimeString("pt-BR")}` : "Aguardando primeira sincronização"}
+              {syncStatus.nextSync && !syncStatus.isRunning && ` • Próximo: ${syncStatus.nextSync.toLocaleTimeString("pt-BR")}`}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-4 text-xs font-mono">
+          <span className="text-muted-foreground">Hosts: <span className="text-foreground">{syncStatus.totalHosts}</span></span>
+          <span className="text-muted-foreground">Métricas: <span className="text-foreground">{syncStatus.totalMetrics}</span></span>
+          <span className="text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />Intervalo: 5min</span>
+        </div>
+        {syncStatus.errors.length > 0 && (
+          <div className="w-full">
+            {syncStatus.errors.map((e, i) => (
+              <p key={i} className="text-xs text-destructive font-mono">{e}</p>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Form */}
       {showForm && (
         <div className="glass rounded-lg p-5 neon-border animate-slide-up">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold font-mono text-sm">{editId ? "Editar" : "Nova"} Instância Zabbix</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold font-mono text-sm">{editId ? "Editar" : "Nova"} Instância Zabbix</h2>
+              <span title="Criptografia AES-256"><Shield className="w-4 h-4 text-primary" /></span>
+            </div>
             <button onClick={resetForm} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Nome *</label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Zabbix Produção" className="bg-secondary border-border" />
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Zabbix Produção" className={`bg-secondary border-border ${fieldOk("name") ? "border-success/40" : ""}`} />
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">URL da API *</label>
-              <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://zabbix.empresa.com" className="bg-secondary border-border" />
+              <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://zabbix.empresa.com" className={`bg-secondary border-border ${fieldOk("url") ? "border-success/40" : validation.errors.url ? "border-destructive/60" : ""}`} />
+              <FieldError field="url" />
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Versão</label>
@@ -105,25 +187,43 @@ const ZabbixConfigPage = () => {
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Usuário API *</label>
-              <Input value={form.apiUser} onChange={(e) => setForm({ ...form, apiUser: e.target.value })} placeholder="api_monitor" className="bg-secondary border-border" />
+              <Input value={form.apiUser} onChange={(e) => setForm({ ...form, apiUser: e.target.value })} placeholder="api_monitor" className={`bg-secondary border-border ${fieldOk("apiUser") ? "border-success/40" : validation.errors.apiUser ? "border-destructive/60" : ""}`} />
+              <FieldError field="apiUser" />
             </div>
             <div className="md:col-span-2">
-              <label className="text-xs text-muted-foreground mb-1 block">Token API</label>
+              <label className="text-xs text-muted-foreground mb-1 flex items-center gap-1 block">
+                Token API * <Shield className="w-3 h-3 text-primary" />
+              </label>
               <Input
                 type={showToken ? "text" : "password"}
                 value={form.apiToken}
                 onChange={(e) => setForm({ ...form, apiToken: e.target.value })}
-                placeholder="Token de acesso à API do Zabbix"
-                className="bg-secondary border-border"
+                placeholder="Token criptografado com AES-256"
+                className={`bg-secondary border-border ${fieldOk("apiToken") ? "border-success/40" : validation.errors.apiToken ? "border-destructive/60" : ""}`}
               />
-              <button onClick={() => setShowToken(!showToken)} className="text-xs text-primary mt-1">
-                {showToken ? "Ocultar" : "Mostrar"} token
-              </button>
+              <div className="flex items-center justify-between mt-1">
+                <FieldError field="apiToken" />
+                <button onClick={() => setShowToken(!showToken)} className="text-xs text-primary">
+                  {showToken ? "Ocultar" : "Mostrar"} token
+                </button>
+              </div>
             </div>
           </div>
-          <div className="flex justify-end mt-4">
-            <Button onClick={handleSave} className="bg-primary text-primary-foreground hover:bg-primary/90">
-              <Save className="w-4 h-4 mr-2" /> {editId ? "Salvar" : "Cadastrar"}
+
+          {/* Validation summary */}
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
+            <div className="flex items-center gap-2 text-xs">
+              {Object.keys(validation.errors).length === 0 && form.url ? (
+                <span className="flex items-center gap-1 text-success"><CheckCircle2 className="w-3.5 h-3.5" />Validação OK</span>
+              ) : Object.keys(validation.errors).length > 0 ? (
+                <span className="flex items-center gap-1 text-destructive"><XCircle className="w-3.5 h-3.5" />{Object.keys(validation.errors).length} erro(s)</span>
+              ) : (
+                <span className="text-muted-foreground">Preencha os campos obrigatórios</span>
+              )}
+            </div>
+            <Button onClick={handleSave} disabled={isSaving || !validation.valid || !form.url} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              {editId ? "Salvar" : "Cadastrar"}
             </Button>
           </div>
         </div>
@@ -143,32 +243,24 @@ const ZabbixConfigPage = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold font-mono text-sm">{z.name}</h3>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      {z.url} <ExternalLink className="w-3 h-3" />
-                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">{z.url} <ExternalLink className="w-3 h-3" /></p>
                   </div>
                 </div>
-                <span className={`text-xs font-mono ${st.color}`}>{st.label}</span>
+                <div className="flex items-center gap-2">
+                  <span title="Criptografado"><Shield className="w-3.5 h-3.5 text-primary" /></span>
+                  <span className={`text-xs font-mono ${st.color}`}>{st.label}</span>
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3 mb-4 text-xs">
-                <div>
-                  <span className="text-muted-foreground block">Versão</span>
-                  <span className="font-mono">{z.version || "—"}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">Hosts</span>
-                  <span className="font-mono">{z.hostsMonitored}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">Último Sync</span>
-                  <span className="font-mono">{new Date(z.lastSync).toLocaleTimeString("pt-BR")}</span>
-                </div>
+                <div><span className="text-muted-foreground block">Versão</span><span className="font-mono">{z.version || "—"}</span></div>
+                <div><span className="text-muted-foreground block">Hosts</span><span className="font-mono">{z.hostsMonitored}</span></div>
+                <div><span className="text-muted-foreground block">Último Sync</span><span className="font-mono">{new Date(z.lastSync).toLocaleTimeString("pt-BR")}</span></div>
               </div>
 
               <div className="flex gap-2 pt-3 border-t border-border/50">
-                <button onClick={() => handleTestConnection(z.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-success/10 text-success hover:bg-success/20 transition-colors">
-                  <RefreshCw className="w-3 h-3" /> Testar
+                <button onClick={() => handleTestConnection(z)} disabled={isTesting} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-success/10 text-success hover:bg-success/20 transition-colors disabled:opacity-50">
+                  {isTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} Testar
                 </button>
                 <button onClick={() => handleEdit(z)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
                   <Edit2 className="w-3 h-3" /> Editar
@@ -185,7 +277,6 @@ const ZabbixConfigPage = () => {
       {instances.length === 0 && (
         <div className="glass rounded-lg p-10 text-center">
           <p className="text-muted-foreground text-sm">Nenhuma instância Zabbix configurada</p>
-          <p className="text-muted-foreground/60 text-xs mt-1">Clique em "Nova Instância" para começar</p>
         </div>
       )}
     </div>
