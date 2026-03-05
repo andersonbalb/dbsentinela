@@ -15,6 +15,7 @@ import ServerDetailPage from "./pages/ServerDetailPage";
 import DatabaseDetailPage from "./pages/DatabaseDetailPage";
 import ZabbixConfigPage from "./pages/ZabbixConfigPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import BackupsPage from "./pages/BackupsPage";
 import AppSidebar from "./components/AppSidebar";
 import NotFound from "./pages/NotFound";
 
@@ -44,6 +45,7 @@ const AppRoutes = () => {
       <Route path="/alerts" element={<ProtectedLayout><AlertsPage /></ProtectedLayout>} />
       <Route path="/slow-queries" element={<ProtectedLayout><SlowQueriesPage /></ProtectedLayout>} />
       <Route path="/thresholds" element={<ProtectedLayout><ThresholdsPage /></ProtectedLayout>} />
+      <Route path="/backups" element={<ProtectedLayout><BackupsPage /></ProtectedLayout>} />
       <Route path="/zabbix" element={<ProtectedLayout><ZabbixConfigPage /></ProtectedLayout>} />
       <Route path="/notifications" element={<ProtectedLayout><NotificationsPage /></ProtectedLayout>} />
       <Route path="*" element={<NotFound />} />
