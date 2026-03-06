@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, FileSpreadsheet, AlertTriangle, Archive, Activity, Radio, Info, CheckCircle2 } from "lucide-react";
+import { FileText, FileSpreadsheet, AlertTriangle, Archive, Activity, Radio, Info, CheckCircle2 } from "lucide-react";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { mockAlerts } from "@/data/mockData";
 import { mockBackupJobs } from "@/data/mockBackupData";
-import { getSimulatedHostMetrics, ZabbixHostMetric } from "@/services/zabbixIntegration";
+import { ZabbixHostMetric } from "@/services/zabbixIntegration";
 import {
   exportAlertsCSV, exportAlertsPDF,
   exportBackupsCSV, exportBackupsPDF,
@@ -63,6 +64,51 @@ const ReportsPage = () => {
     totalSizeMB: filteredBackups.reduce((a: number, b: any) => a + (b.sizeMB || 0), 0),
   };
 
+  // Generate alert trend data grouped by day
+  const alertTrendData = useMemo(() => {
+    const dayMap: Record<string, { date: string; critical: number; warning: number; info: number }> = {};
+    const days = period === "24h" ? 1 : period === "7d" ? 7 : period === "30d" ? 30 : 14;
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split("T")[0];
+      dayMap[key] = { date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), critical: 0, warning: 0, info: 0 };
+    }
+    filteredAlerts.forEach((a: any) => {
+      const key = new Date(a.createdAt).toISOString().split("T")[0];
+      if (dayMap[key]) dayMap[key][a.severity as "critical" | "warning" | "info"]++;
+    });
+    return Object.values(dayMap);
+  }, [filteredAlerts, period]);
+
+  // Generate backup volume data grouped by day
+  const backupTrendData = useMemo(() => {
+    const dayMap: Record<string, { date: string; volumeGB: number; success: number; failed: number }> = {};
+    const days = period === "24h" ? 1 : period === "7d" ? 7 : period === "30d" ? 30 : 14;
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split("T")[0];
+      dayMap[key] = { date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), volumeGB: 0, success: 0, failed: 0 };
+    }
+    filteredBackups.forEach((b: any) => {
+      const key = new Date(b.startedAt).toISOString().split("T")[0];
+      if (dayMap[key]) {
+        dayMap[key].volumeGB = Math.round((dayMap[key].volumeGB + (b.sizeMB || 0) / 1024) * 100) / 100;
+        if (b.status === "success") dayMap[key].success++;
+        else if (b.status === "failed") dayMap[key].failed++;
+      }
+    });
+    return Object.values(dayMap);
+  }, [filteredBackups, period]);
+
+  const chartTooltipStyle = {
+    contentStyle: { backgroundColor: "hsl(220 18% 10%)", border: "1px solid hsl(220 15% 18%)", borderRadius: "8px", fontSize: "12px" },
+    labelStyle: { color: "hsl(180 10% 90%)" },
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -110,6 +156,28 @@ const ReportsPage = () => {
               <p className="text-xs text-muted-foreground">Resolvidos</p>
             </CardContent></Card>
           </div>
+
+          {/* Alert Trend Chart */}
+          <Card className="glass">
+            <CardHeader>
+              <CardTitle className="text-base">Evolução de Alertas por Dia</CardTitle>
+              <CardDescription>Distribuição por severidade no período</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <AreaChart data={alertTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 18%)" />
+                  <XAxis dataKey="date" tick={{ fill: "hsl(215 10% 50%)", fontSize: 11 }} />
+                  <YAxis tick={{ fill: "hsl(215 10% 50%)", fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip {...chartTooltipStyle} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Area type="monotone" dataKey="critical" name="Crítico" stackId="1" stroke="hsl(0 72% 55%)" fill="hsl(0 72% 55% / 0.4)" />
+                  <Area type="monotone" dataKey="warning" name="Warning" stackId="1" stroke="hsl(38 92% 55%)" fill="hsl(38 92% 55% / 0.4)" />
+                  <Area type="monotone" dataKey="info" name="Info" stackId="1" stroke="hsl(210 80% 55%)" fill="hsl(210 80% 55% / 0.4)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
           <Card className="glass">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -179,6 +247,46 @@ const ReportsPage = () => {
               <div className="text-2xl font-bold font-mono">{(backupStats.totalSizeMB / 1024).toFixed(1)} GB</div>
               <p className="text-xs text-muted-foreground">Volume Total</p>
             </CardContent></Card>
+          </div>
+
+          {/* Backup Trend Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="glass">
+              <CardHeader>
+                <CardTitle className="text-base">Volume de Backup por Dia</CardTitle>
+                <CardDescription>Tamanho total em GB</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={backupTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 18%)" />
+                    <XAxis dataKey="date" tick={{ fill: "hsl(215 10% 50%)", fontSize: 11 }} />
+                    <YAxis tick={{ fill: "hsl(215 10% 50%)", fontSize: 11 }} />
+                    <Tooltip {...chartTooltipStyle} />
+                    <Bar dataKey="volumeGB" name="Volume (GB)" fill="hsl(175 80% 50%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card className="glass">
+              <CardHeader>
+                <CardTitle className="text-base">Jobs de Backup por Dia</CardTitle>
+                <CardDescription>Sucesso vs Falha</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={backupTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 15% 18%)" />
+                    <XAxis dataKey="date" tick={{ fill: "hsl(215 10% 50%)", fontSize: 11 }} />
+                    <YAxis tick={{ fill: "hsl(215 10% 50%)", fontSize: 11 }} allowDecimals={false} />
+                    <Tooltip {...chartTooltipStyle} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="success" name="Sucesso" fill="hsl(145 65% 45%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="failed" name="Falha" fill="hsl(0 72% 55%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           </div>
 
           <Card className="glass">
