@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, Bell, Zap, Server, SlidersHorizontal,
-  LogOut, Database, ChevronLeft, ChevronRight, Monitor, Radio, BellRing, Archive, FileBarChart
+  LogOut, Database, ChevronLeft, ChevronRight, Monitor, Radio, BellRing, Archive, FileBarChart, Workflow
 } from "lucide-react";
 import { useState } from "react";
 
