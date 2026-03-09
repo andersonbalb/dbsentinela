@@ -17,6 +17,7 @@ import ZabbixConfigPage from "./pages/ZabbixConfigPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import BackupsPage from "./pages/BackupsPage";
 import ReportsPage from "./pages/ReportsPage";
+import AutomationsPage from "./pages/AutomationsPage";
 import AppSidebar from "./components/AppSidebar";
 import NotFound from "./pages/NotFound";
 
