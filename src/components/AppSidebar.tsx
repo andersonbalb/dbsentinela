@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, Bell, Zap, Server, SlidersHorizontal,
-  LogOut, Database, ChevronLeft, ChevronRight, Monitor, Radio, BellRing, Archive, FileBarChart
+  LogOut, Database, ChevronLeft, ChevronRight, Monitor, Radio, BellRing, Archive, FileBarChart, Workflow
 } from "lucide-react";
 import { useState } from "react";
 
@@ -16,6 +16,7 @@ const navItems = [
   { to: "/thresholds", icon: SlidersHorizontal, label: "Thresholds" },
   { to: "/zabbix", icon: Radio, label: "Zabbix Config" },
   { to: "/reports", icon: FileBarChart, label: "Relatórios" },
+  { to: "/automations", icon: Workflow, label: "Automações" },
   { to: "/notifications", icon: BellRing, label: "Notificações" },
 ];
 
