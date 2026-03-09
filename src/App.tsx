@@ -50,6 +50,7 @@ const AppRoutes = () => {
       <Route path="/backups" element={<ProtectedLayout><BackupsPage /></ProtectedLayout>} />
       <Route path="/zabbix" element={<ProtectedLayout><ZabbixConfigPage /></ProtectedLayout>} />
       <Route path="/reports" element={<ProtectedLayout><ReportsPage /></ProtectedLayout>} />
+      <Route path="/automations" element={<ProtectedLayout><AutomationsPage /></ProtectedLayout>} />
       <Route path="/notifications" element={<ProtectedLayout><NotificationsPage /></ProtectedLayout>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
