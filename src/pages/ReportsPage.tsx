@@ -382,6 +382,79 @@ const ReportsPage = () => {
                 </CardContent></Card>
               </div>
 
+              {/* CPU/Memory Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card className="glass">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">CPU Média por Host (%)</CardTitle>
+                    <CardDescription className="text-xs">Uso atual de CPU de cada host monitorado</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={zabbixMetrics} layout="vertical" margin={{ left: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                        <XAxis type="number" domain={[0, 100]} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                        <YAxis type="category" dataKey="hostname" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} width={130} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                          labelStyle={{ color: "hsl(var(--foreground))" }}
+                          formatter={(value: number) => [`${value}%`, "CPU"]}
+                        />
+                        <Bar dataKey="cpu" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={16} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Memória Média por Host (%)</CardTitle>
+                    <CardDescription className="text-xs">Uso atual de memória de cada host monitorado</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={zabbixMetrics} layout="vertical" margin={{ left: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                        <XAxis type="number" domain={[0, 100]} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                        <YAxis type="category" dataKey="hostname" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} width={130} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                          labelStyle={{ color: "hsl(var(--foreground))" }}
+                          formatter={(value: number) => [`${value}%`, "Memória"]}
+                        />
+                        <Bar dataKey="memory" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} barSize={16} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Combined overview chart */}
+              <Card className="glass">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Visão Geral — CPU vs Memória vs Disco</CardTitle>
+                  <CardDescription className="text-xs">Comparativo de recursos por host</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={zabbixMetrics} margin={{ left: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                      <XAxis dataKey="hostname" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }} angle={-35} textAnchor="end" height={60} />
+                      <YAxis domain={[0, 100]} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                        labelStyle={{ color: "hsl(var(--foreground))" }}
+                        formatter={(value: number, name: string) => [`${value}%`, name === "cpu" ? "CPU" : name === "memory" ? "Memória" : "Disco"]}
+                      />
+                      <Legend formatter={(v) => v === "cpu" ? "CPU" : v === "memory" ? "Memória" : "Disco"} />
+                      <Bar dataKey="cpu" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={14} />
+                      <Bar dataKey="memory" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} barSize={14} />
+                      <Bar dataKey="disk" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} barSize={14} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
               <Card className="glass">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
