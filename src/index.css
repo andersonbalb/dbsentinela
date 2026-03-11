@@ -164,3 +164,11 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(175 80% 50% / 0.5);
 }
+
+/* Hide Lovable badge */
+a[href*="lovable.dev"][target="_blank"],
+#lovable-badge,
+div[id*="lovable"],
+a[aria-label*="Lovable"] {
+  display: none !important;
+}
