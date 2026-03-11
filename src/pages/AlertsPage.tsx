@@ -160,29 +160,31 @@ const AlertsPage = () => {
 
           return (
             <div key={alert.id} className={`glass rounded-lg overflow-hidden animate-slide-up ${alert.status === "resolved" ? "opacity-60" : ""}`}>
-              <div className="p-4 flex items-start gap-4">
-                <div className={`p-2 rounded-md ${cfg.bg}`}>
-                  <Icon className={`w-4 h-4 ${cfg.color}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs font-mono font-semibold ${cfg.color}`}>{alert.severity.toUpperCase()}</span>
-                    <span className="text-xs text-muted-foreground">•</span>
-                    <span className="text-xs font-mono text-muted-foreground">{alert.databaseName}</span>
-                    <span className="text-xs text-muted-foreground">•</span>
-                    <span className="text-xs text-muted-foreground">{alert.metric}</span>
+              <div className="p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-md ${cfg.bg} flex-shrink-0`}>
+                    <Icon className={`w-4 h-4 ${cfg.color}`} />
                   </div>
-                  <p className="text-sm">{alert.message}</p>
-                  <p className="text-xs text-muted-foreground mt-1 font-mono">
-                    Valor: {alert.value}% | Threshold: {alert.threshold}% | {new Date(alert.createdAt).toLocaleString("pt-BR")}
-                  </p>
-                  {alert.acknowledgedAt && (
-                    <p className="text-xs text-muted-foreground/60 mt-0.5">
-                      Reconhecido por {alert.acknowledgedBy} em {new Date(alert.acknowledgedAt).toLocaleString("pt-BR")}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`text-xs font-mono font-semibold ${cfg.color}`}>{alert.severity.toUpperCase()}</span>
+                      <span className="text-xs text-muted-foreground">•</span>
+                      <span className="text-xs font-mono text-muted-foreground">{alert.databaseName}</span>
+                      <span className="hidden sm:inline text-xs text-muted-foreground">•</span>
+                      <span className="hidden sm:inline text-xs text-muted-foreground">{alert.metric}</span>
+                    </div>
+                    <p className="text-sm">{alert.message}</p>
+                    <p className="text-xs text-muted-foreground mt-1 font-mono break-all">
+                      Valor: {alert.value}% | Threshold: {alert.threshold}% | {new Date(alert.createdAt).toLocaleString("pt-BR")}
                     </p>
-                  )}
+                    {alert.acknowledgedAt && (
+                      <p className="text-xs text-muted-foreground/60 mt-0.5">
+                        Reconhecido por {alert.acknowledgedBy} em {new Date(alert.acknowledgedAt).toLocaleString("pt-BR")}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex gap-2 flex-wrap">
                   {/* Quick AI */}
                   <button
                     onClick={() => analysis ? setExpandedAnalysis(isExpanded ? null : alert.id) : handleAnalyze(alert)}

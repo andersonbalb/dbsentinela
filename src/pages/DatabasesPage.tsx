@@ -75,18 +75,18 @@ const DatabasesPage = () => {
           onClick={() => { resetForm(); setShowForm(true); }}
           className="bg-primary text-primary-foreground hover:bg-primary/90 glow-primary"
         >
-          <Plus className="w-4 h-4 mr-2" /> Novo Banco
+          <Plus className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Novo Banco</span><span className="sm:hidden">Novo</span>
         </Button>
       </div>
 
       {/* Form */}
       {showForm && (
-        <div className="glass rounded-lg p-5 neon-border animate-slide-up">
+        <div className="glass rounded-lg p-4 sm:p-5 neon-border animate-slide-up">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold font-mono text-sm">{editId ? "Editar" : "Novo"} Banco de Dados</h2>
             <button onClick={resetForm} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Nome</label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="prod-master" className="bg-secondary border-border" />
@@ -122,8 +122,8 @@ const DatabasesPage = () => {
         </div>
       )}
 
-      {/* Table */}
-      <div className="glass rounded-lg overflow-hidden">
+      {/* Desktop Table */}
+      <div className="glass rounded-lg overflow-hidden hidden md:block">
         <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-border/50 text-xs font-mono text-muted-foreground">
           <div className="col-span-1">Status</div>
           <div className="col-span-2">Nome</div>
@@ -150,6 +150,42 @@ const DatabasesPage = () => {
               <button onClick={() => handleDelete(db.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {databases.map((db, i) => (
+          <div key={db.id} className="glass rounded-lg p-4 animate-slide-up" style={{ animationDelay: `${i * 15}ms` }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className={`status-dot-${db.status}`} />
+                <span className="font-mono text-sm font-semibold">{db.name}</span>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleEdit(db)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => handleDelete(db.id)} className="p-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-muted-foreground block">Engine</span>
+                <span>{db.engine} {db.version}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block">Porta</span>
+                <span className="font-mono">{db.port}</span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-muted-foreground block">Host</span>
+                <span className="font-mono text-muted-foreground break-all">{db.host}</span>
+              </div>
             </div>
           </div>
         ))}

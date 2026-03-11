@@ -67,7 +67,7 @@ const BackupsPage = () => {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {summaryCards.map((c) => (
           <div key={c.label} className="glass rounded-lg p-3 animate-slide-up">
             <div className="flex items-center gap-1.5 mb-1">
@@ -85,7 +85,7 @@ const BackupsPage = () => {
           Histórico de Jobs
         </button>
         <button onClick={() => setShowPolicies(true)} className={`px-4 py-2 text-sm rounded-md font-mono transition-colors ${showPolicies ? "bg-primary/15 text-primary neon-border" : "bg-secondary text-muted-foreground"}`}>
-          Políticas de Backup
+          Políticas
         </button>
       </div>
 
@@ -94,15 +94,15 @@ const BackupsPage = () => {
           {/* Filters */}
           <div className="flex flex-wrap gap-3 items-center">
             <Filter className="w-4 h-4 text-muted-foreground" />
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 flex-wrap">
               {(["all", "success", "running", "failed"] as const).map((s) => (
                 <button key={s} onClick={() => setFilterStatus(s)} className={`px-2.5 py-1 text-xs rounded font-mono ${filterStatus === s ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"}`}>
                   {s === "all" ? "Todos" : statusConfig[s].label}
                 </button>
               ))}
             </div>
-            <div className="w-px h-5 bg-border" />
-            <div className="flex gap-1.5">
+            <div className="hidden sm:block w-px h-5 bg-border" />
+            <div className="flex gap-1.5 flex-wrap">
               {(["all", "full", "incremental", "wal", "logical"] as const).map((t) => (
                 <button key={t} onClick={() => setFilterType(t)} className={`px-2.5 py-1 text-xs rounded font-mono ${filterType === t ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"}`}>
                   {t === "all" ? "Todos" : typeLabels[t].label}
@@ -111,8 +111,8 @@ const BackupsPage = () => {
             </div>
           </div>
 
-          {/* Job List */}
-          <div className="glass rounded-lg overflow-hidden">
+          {/* Desktop Table */}
+          <div className="glass rounded-lg overflow-hidden hidden md:block">
             <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-border/50 text-xs font-mono text-muted-foreground">
               <div className="col-span-1">Status</div>
               <div className="col-span-2">Banco</div>
@@ -178,6 +178,67 @@ const BackupsPage = () => {
               );
             })}
           </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-2">
+            {filtered.slice(0, 50).map((job, i) => {
+              const sc = statusConfig[job.status];
+              const tc = typeLabels[job.type];
+              const StatusIcon = sc.icon;
+              const isExpanded = expandedId === job.id;
+              return (
+                <div key={job.id} className="glass rounded-lg overflow-hidden animate-slide-up" style={{ animationDelay: `${i * 10}ms` }}>
+                  <div
+                    className="p-4 active:bg-secondary/30 cursor-pointer transition-colors"
+                    onClick={() => setExpandedId(isExpanded ? null : job.id)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <StatusIcon className={`w-4 h-4 ${sc.color} ${job.status === "running" ? "animate-spin-slow" : ""}`} />
+                        <span className="font-mono text-sm font-semibold">{job.databaseName}</span>
+                      </div>
+                      <span className={`text-xs font-mono ${tc.color}`}>{tc.label}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground block">Tamanho</span>
+                        <span className="font-mono">{formatSize(job.sizeMB)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block">Duração</span>
+                        <span className="font-mono">{job.duration || "..."}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block">Início</span>
+                        <span className="font-mono">{new Date(job.startedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="px-4 py-3 border-t border-border/30 bg-secondary/20 animate-slide-up text-xs space-y-2">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><span className="text-muted-foreground block">ID</span><span className="font-mono break-all">{job.id}</span></div>
+                        <div><span className="text-muted-foreground block">Schedule</span><span className="font-mono">{job.schedule}</span></div>
+                        <div><span className="text-muted-foreground block">Retenção</span><span className="font-mono">{job.retentionDays} dias</span></div>
+                        <div><span className="text-muted-foreground block">PITR</span><span className={`font-mono ${job.pitrEnabled ? "text-success" : "text-muted-foreground"}`}>{job.pitrEnabled ? "Ativo" : "Inativo"}</span></div>
+                        <div><span className="text-muted-foreground block">Comprimido</span><span className="font-mono">{formatSize(job.compressedSizeMB)}</span></div>
+                        <div><span className="text-muted-foreground block">Verificação</span><span className="font-mono">
+                          {job.verificationStatus === "ok" ? "✓ OK" : job.verificationStatus === "failed" ? "✗ Falhou" : job.verificationStatus === "pending" ? "Pendente" : "—"}
+                        </span></div>
+                        <div className="col-span-2"><span className="text-muted-foreground block">Destino</span><span className="font-mono break-all">{job.destination}</span></div>
+                      </div>
+                      {job.error && (
+                        <div className="bg-destructive/10 rounded p-2">
+                          <p className="font-mono text-destructive">{job.error}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </>
       ) : (
         /* Policies */
@@ -191,13 +252,13 @@ const BackupsPage = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold font-mono text-sm">{p.databaseName}</h3>
-                    <p className="text-xs text-muted-foreground">{p.destination}</p>
+                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">{p.destination}</p>
                   </div>
                 </div>
                 <span className={`text-xs font-mono ${p.enabled ? "text-success" : "text-muted-foreground"}`}>{p.enabled ? "Ativo" : "Inativo"}</span>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 text-xs">
                 <div><span className="text-muted-foreground block">Full</span><span className="font-mono">{p.fullSchedule}</span></div>
                 <div><span className="text-muted-foreground block">Incremental</span><span className="font-mono">{p.incrementalSchedule}</span></div>
                 <div><span className="text-muted-foreground block">WAL Archive</span><span className={`font-mono ${p.walArchiving ? "text-success" : "text-muted-foreground"}`}>{p.walArchiving ? "Sim" : "Não"}</span></div>
