@@ -18,6 +18,7 @@ import ZabbixConfigPage from "./pages/ZabbixConfigPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import BackupsPage from "./pages/BackupsPage";
 import ReportsPage from "./pages/ReportsPage";
+import InstallPage from "./pages/InstallPage";
 import AutomationsPage from "./pages/AutomationsPage";
 import AppSidebar from "./components/AppSidebar";
 import NotFound from "./pages/NotFound";
@@ -54,6 +55,7 @@ const AppRoutes = () => {
       <Route path="/reports" element={<ProtectedLayout><ReportsPage /></ProtectedLayout>} />
       <Route path="/automations" element={<ProtectedLayout><AutomationsPage /></ProtectedLayout>} />
       <Route path="/notifications" element={<ProtectedLayout><NotificationsPage /></ProtectedLayout>} />
+      <Route path="/install" element={<InstallPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
