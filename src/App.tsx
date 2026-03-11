@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import AlertsPage from "./pages/AlertsPage";
@@ -25,11 +26,12 @@ const queryClient = new QueryClient();
 
 const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
+  usePushNotifications();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return (
     <div className="flex min-h-screen">
       <AppSidebar />
-      <main className="flex-1 p-3 sm:p-6 overflow-auto min-w-0">{children}</main>
+      <main className="flex-1 overflow-auto min-w-0 p-3 pt-[4.25rem] sm:p-6 sm:pt-6">{children}</main>
     </div>
   );
 };

@@ -121,8 +121,6 @@ const AppSidebar = () => {
           </div>
           <span className="font-bold font-mono text-primary text-sm neon-text">DB Sentinela</span>
         </div>
-        {/* Spacer for fixed header */}
-        <div className="h-14 flex-shrink-0" />
       </>
     );
   }
