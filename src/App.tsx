@@ -55,6 +55,7 @@ const AppRoutes = () => {
       <Route path="/reports" element={<ProtectedLayout><ReportsPage /></ProtectedLayout>} />
       <Route path="/automations" element={<ProtectedLayout><AutomationsPage /></ProtectedLayout>} />
       <Route path="/notifications" element={<ProtectedLayout><NotificationsPage /></ProtectedLayout>} />
+      <Route path="/install" element={<InstallPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
