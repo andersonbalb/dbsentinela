@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { mockDatabases, DatabaseInstance, DatabaseStatus } from "@/data/mockData";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import RefreshIndicator from "@/components/RefreshIndicator";
+import PullToRefresh from "@/components/PullToRefresh";
 import {
   Database, Server, Cpu, HardDrive, Activity,
   Wifi, WifiOff, AlertTriangle, TrendingUp, Users
@@ -37,7 +38,6 @@ const DashboardPage = () => {
   const [filter, setFilter] = useState<DatabaseStatus | "all">("all");
 
   const databases = useMemo(() => {
-    // Simulate slight data changes on refresh
     return mockDatabases.map((db) => ({
       ...db,
       cpu: Math.min(100, Math.max(0, db.cpu + Math.round((Math.random() - 0.5) * 10))),
@@ -71,58 +71,60 @@ const DashboardPage = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold font-mono neon-text">Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Visão geral de {databases.length} instâncias</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <RefreshIndicator lastUpdated={lastUpdated} isRefreshing={isRefreshing} countdown={countdown} />
-          <button onClick={triggerRefresh} className="px-3 py-1.5 text-xs rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-mono">
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {summaryCards.map((card) => (
-          <div key={card.label} className="glass rounded-lg p-4 animate-slide-up">
-            <div className="flex items-center gap-2 mb-2">
-              <card.icon className={`w-4 h-4 ${card.accent}`} />
-              <span className="text-xs text-muted-foreground">{card.label}</span>
-            </div>
-            <p className={`text-2xl font-bold font-mono ${card.accent}`}>{card.value}</p>
+    <PullToRefresh onRefresh={triggerRefresh} isRefreshing={isRefreshing}>
+      <div className="space-y-6 animate-fade-in">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-bold font-mono neon-text">Dashboard</h1>
+            <p className="text-muted-foreground text-sm">Visão geral de {databases.length} instâncias</p>
           </div>
-        ))}
-      </div>
+          <div className="flex items-center gap-4">
+            <RefreshIndicator lastUpdated={lastUpdated} isRefreshing={isRefreshing} countdown={countdown} />
+            <button onClick={triggerRefresh} className="px-3 py-1.5 text-xs rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-mono">
+              Refresh
+            </button>
+          </div>
+        </div>
 
-      {/* Filter */}
-      <div className="flex gap-2">
-        {(["all", "online", "warning", "critical", "offline"] as const).map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            className={`px-3 py-1.5 text-xs rounded-md transition-colors font-mono ${
-              filter === s
-                ? "bg-primary/15 text-primary neon-border"
-                : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-            }`}
-          >
-            {s === "all" ? "Todos" : s.charAt(0).toUpperCase() + s.slice(1)}
-          </button>
-        ))}
-      </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {summaryCards.map((card) => (
+            <div key={card.label} className="glass rounded-lg p-4 animate-slide-up">
+              <div className="flex items-center gap-2 mb-2">
+                <card.icon className={`w-4 h-4 ${card.accent}`} />
+                <span className="text-xs text-muted-foreground">{card.label}</span>
+              </div>
+              <p className={`text-2xl font-bold font-mono ${card.accent}`}>{card.value}</p>
+            </div>
+          ))}
+        </div>
 
-      {/* Database Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 ${isRefreshing ? "opacity-60" : ""} transition-opacity`}>
-        {filtered.map((db, i) => (
-          <DatabaseCard key={db.id} db={db} index={i} />
-        ))}
+        {/* Filter */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {(["all", "online", "warning", "critical", "offline"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setFilter(s)}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors font-mono whitespace-nowrap ${
+                filter === s
+                  ? "bg-primary/15 text-primary neon-border"
+                  : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+              }`}
+            >
+              {s === "all" ? "Todos" : s.charAt(0).toUpperCase() + s.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Database Cards */}
+        <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 ${isRefreshing ? "opacity-60" : ""} transition-opacity`}>
+          {filtered.map((db, i) => (
+            <DatabaseCard key={db.id} db={db} index={i} />
+          ))}
+        </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 };
 
@@ -131,7 +133,7 @@ const DatabaseCard = ({ db, index }: { db: DatabaseInstance; index: number }) =>
   const navigate = useNavigate();
   return (
     <div
-      className="glass rounded-lg p-5 hover:neon-border transition-all animate-slide-up cursor-pointer"
+      className="glass rounded-lg p-4 sm:p-5 hover:neon-border transition-all animate-slide-up cursor-pointer"
       style={{ animationDelay: `${index * 30}ms` }}
       onClick={() => navigate(`/databases/${db.id}`)}
     >
@@ -172,7 +174,7 @@ const DatabaseCard = ({ db, index }: { db: DatabaseInstance; index: number }) =>
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground/50 mt-2 font-mono">{db.host}:{db.port} • Up: {db.uptime}</p>
+      <p className="text-xs text-muted-foreground/50 mt-2 font-mono truncate">{db.host}:{db.port} • Up: {db.uptime}</p>
     </div>
   );
 };

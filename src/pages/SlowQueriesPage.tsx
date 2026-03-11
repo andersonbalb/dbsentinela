@@ -47,9 +47,19 @@ const SlowQueriesPage = () => {
         <RefreshIndicator lastUpdated={lastUpdated} isRefreshing={isRefreshing} countdown={countdown} />
       </div>
 
+      {/* Sort controls for mobile */}
+      <div className="flex gap-2 md:hidden">
+        <button onClick={() => toggleSort("duration")} className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-md bg-secondary text-muted-foreground font-mono">
+          Duração <SortIcon field="duration" />
+        </button>
+        <button onClick={() => toggleSort("timestamp")} className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-md bg-secondary text-muted-foreground font-mono">
+          Timestamp <SortIcon field="timestamp" />
+        </button>
+      </div>
+
       <div className={`glass rounded-lg overflow-hidden ${isRefreshing ? "opacity-60" : ""} transition-opacity`}>
-        {/* Header */}
-        <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-border/50 text-xs font-mono text-muted-foreground">
+        {/* Desktop Header */}
+        <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-3 border-b border-border/50 text-xs font-mono text-muted-foreground">
           <div className="col-span-1">#</div>
           <div className="col-span-3">Banco</div>
           <div className="col-span-4">Query</div>
@@ -65,8 +75,9 @@ const SlowQueriesPage = () => {
         {/* Rows */}
         {sorted.map((sq, i) => (
           <div key={sq.id} className="animate-slide-up" style={{ animationDelay: `${i * 20}ms` }}>
+            {/* Desktop row */}
             <div
-              className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-border/30 hover:bg-secondary/30 cursor-pointer transition-colors items-center text-sm"
+              className="hidden md:grid grid-cols-12 gap-2 px-4 py-3 border-b border-border/30 hover:bg-secondary/30 cursor-pointer transition-colors items-center text-sm"
               onClick={() => setExpandedId(expandedId === sq.id ? null : sq.id)}
             >
               <div className="col-span-1 text-xs text-muted-foreground font-mono">{i + 1}</div>
@@ -81,6 +92,27 @@ const SlowQueriesPage = () => {
               <div className="col-span-1 font-mono text-xs text-muted-foreground">{sq.rows.toLocaleString()}</div>
               <div className="col-span-2 text-xs text-muted-foreground font-mono">
                 {new Date(sq.timestamp).toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </div>
+            </div>
+
+            {/* Mobile card */}
+            <div
+              className="md:hidden p-4 border-b border-border/30 active:bg-secondary/30 cursor-pointer transition-colors"
+              onClick={() => setExpandedId(expandedId === sq.id ? null : sq.id)}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-mono font-semibold">{sq.databaseName}</span>
+                <span className={`font-mono text-xs font-semibold ${durationColor(sq.duration)}`}>
+                  {sq.duration.toFixed(1)}s
+                </span>
+              </div>
+              <p className="text-xs font-mono text-muted-foreground truncate mb-1">{sq.query}</p>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span>{sq.user}</span>
+                <span>{sq.rows.toLocaleString()} linhas</span>
+                <span className="font-mono">
+                  {new Date(sq.timestamp).toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </span>
               </div>
             </div>
 
@@ -103,9 +135,9 @@ const SlowQueriesPage = () => {
                   <span className="text-xs font-mono text-muted-foreground mb-1 block">Plano de Execução</span>
                   <pre className="text-xs font-mono bg-background/50 rounded p-3 overflow-x-auto text-warning">{sq.executionPlan}</pre>
                 </div>
-                <div className="flex gap-6 text-xs text-muted-foreground font-mono">
+                <div className="flex flex-wrap gap-4 text-xs text-muted-foreground font-mono">
                   <span>Duração: <span className={durationColor(sq.duration)}>{sq.duration.toFixed(3)}s</span></span>
-                  <span>Linhas afetadas: {sq.rows.toLocaleString()}</span>
+                  <span>Linhas: {sq.rows.toLocaleString()}</span>
                   <span>Usuário: {sq.user}</span>
                   <span>{new Date(sq.timestamp).toLocaleString("pt-BR")}</span>
                 </div>
