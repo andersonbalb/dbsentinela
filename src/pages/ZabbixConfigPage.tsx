@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { mockZabbixInstances, ZabbixInstance } from "@/data/mockServersData";
-import { validateZabbixConfig, testZabbixConnection, encryptToken, ZabbixValidationResult } from "@/services/zabbixIntegration";
-import { useZabbixSync, SyncStatus } from "@/hooks/useZabbixSync";
+import { supabase } from "@/integrations/supabase/client";
+import { validateZabbixConfig, testZabbixConnection, ZabbixValidationResult } from "@/services/zabbixIntegration";
+import { useZabbixSync } from "@/hooks/useZabbixSync";
 import {
   Plus, Trash2, Edit2, X, Save, RefreshCw, Wifi, WifiOff, AlertCircle,
   ExternalLink, Shield, CheckCircle2, XCircle, Clock, Activity, Loader2
@@ -10,31 +10,55 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const emptyZabbix: Omit<ZabbixInstance, "id" | "status" | "lastSync" | "hostsMonitored"> = {
-  name: "", url: "", apiUser: "", apiToken: "", version: "",
-};
+interface ZabbixInstanceDB {
+  id: string;
+  name: string;
+  url: string;
+  api_user: string;
+  api_token: string;
+  version: string | null;
+  status: string;
+  last_sync: string | null;
+  hosts_monitored: number | null;
+}
 
-const statusIcons: Record<ZabbixInstance["status"], { icon: typeof Wifi; color: string; label: string }> = {
+const emptyForm = { name: "", url: "", apiUser: "", apiToken: "", version: "" };
+
+const statusIcons: Record<string, { icon: typeof Wifi; color: string; label: string }> = {
   connected: { icon: Wifi, color: "text-success", label: "Conectado" },
   disconnected: { icon: WifiOff, color: "text-muted-foreground", label: "Desconectado" },
   error: { icon: AlertCircle, color: "text-destructive", label: "Erro" },
 };
 
 const ZabbixConfigPage = () => {
-  const [instances, setInstances] = useState<ZabbixInstance[]>(mockZabbixInstances);
+  const [instances, setInstances] = useState<ZabbixInstanceDB[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyZabbix);
+  const [form, setForm] = useState(emptyForm);
   const [showToken, setShowToken] = useState(false);
   const [validation, setValidation] = useState<ZabbixValidationResult>({ valid: true, errors: {} });
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Background sync
-  const syncConfigs = instances.filter((z) => z.status === "connected").map((z) => ({
-    url: z.url, apiUser: z.apiUser, apiToken: z.apiToken, version: z.version,
-  }));
-  const syncStatus = useZabbixSync({ configs: syncConfigs, intervalMinutes: 5, enabled: true });
+  const syncStatus = useZabbixSync({ intervalMinutes: 5, enabled: true });
+
+  // Load instances from DB
+  const loadInstances = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("zabbix_instances")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setInstances(data as ZabbixInstanceDB[]);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadInstances();
+  }, [loadInstances]);
 
   // Auto-validate on form changes
   useEffect(() => {
@@ -55,49 +79,95 @@ const ZabbixConfigPage = () => {
     }
 
     setIsSaving(true);
-    // Encrypt token
-    const encryptedToken = await encryptToken(form.apiToken);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Você precisa estar autenticado.");
+      setIsSaving(false);
+      return;
+    }
 
     if (editId) {
-      setInstances((prev) => prev.map((z) => z.id === editId ? { ...z, ...form, apiToken: encryptedToken } : z));
-      toast.success("Instância Zabbix atualizada!", { description: "Token criptografado com AES-256.", icon: <Shield className="w-4 h-4 text-success" /> });
+      const { error } = await supabase
+        .from("zabbix_instances")
+        .update({
+          name: form.name,
+          url: form.url,
+          api_user: form.apiUser,
+          api_token: form.apiToken,
+          version: form.version || null,
+        })
+        .eq("id", editId);
+
+      if (error) {
+        toast.error(`Erro ao atualizar: ${error.message}`);
+      } else {
+        toast.success("Instância Zabbix atualizada!", { icon: <Shield className="w-4 h-4 text-success" /> });
+      }
     } else {
-      const newZ: ZabbixInstance = {
-        ...form, apiToken: encryptedToken, id: `zbx-${Date.now()}`, status: "disconnected", lastSync: new Date().toISOString(), hostsMonitored: 0,
-      };
-      setInstances((prev) => [...prev, newZ]);
-      toast.success("Instância Zabbix cadastrada!", { description: "Credenciais armazenadas com criptografia AES-256.", icon: <Shield className="w-4 h-4 text-success" /> });
+      const { error } = await supabase
+        .from("zabbix_instances")
+        .insert({
+          name: form.name,
+          url: form.url,
+          api_user: form.apiUser,
+          api_token: form.apiToken,
+          version: form.version || null,
+          user_id: user.id,
+        });
+
+      if (error) {
+        toast.error(`Erro ao cadastrar: ${error.message}`);
+      } else {
+        toast.success("Instância Zabbix cadastrada!", { icon: <Shield className="w-4 h-4 text-success" /> });
+      }
     }
+
     setIsSaving(false);
     resetForm();
+    loadInstances();
   };
 
-  const handleTestConnection = async (z: ZabbixInstance) => {
+  const handleTestConnection = async (z: ZabbixInstanceDB) => {
     setIsTesting(true);
-    const result = await testZabbixConnection({ url: z.url, apiUser: z.apiUser, apiToken: z.apiToken });
+    const result = await testZabbixConnection({ url: z.url, apiUser: z.api_user, apiToken: z.api_token });
     if (result.success) {
-      setInstances((prev) => prev.map((x) => x.id === z.id ? { ...x, status: "connected", lastSync: new Date().toISOString(), version: result.version || x.version } : x));
+      await supabase
+        .from("zabbix_instances")
+        .update({
+          status: "connected",
+          last_sync: new Date().toISOString(),
+          version: result.version || z.version,
+          hosts_monitored: result.hostsCount || z.hosts_monitored,
+        })
+        .eq("id", z.id);
       toast.success("Conexão estabelecida com sucesso!", { icon: <CheckCircle2 className="w-4 h-4 text-success" /> });
     } else {
-      setInstances((prev) => prev.map((x) => x.id === z.id ? { ...x, status: "error" } : x));
+      await supabase.from("zabbix_instances").update({ status: "error" }).eq("id", z.id);
       toast.error(`Falha na conexão: ${result.error}`, { icon: <XCircle className="w-4 h-4 text-destructive" /> });
     }
+    loadInstances();
     setIsTesting(false);
   };
 
-  const handleEdit = (z: ZabbixInstance) => {
-    setForm({ name: z.name, url: z.url, apiUser: z.apiUser, apiToken: z.apiToken, version: z.version });
+  const handleEdit = (z: ZabbixInstanceDB) => {
+    setForm({ name: z.name, url: z.url, apiUser: z.api_user, apiToken: z.api_token, version: z.version || "" });
     setEditId(z.id);
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
-    setInstances((prev) => prev.filter((z) => z.id !== id));
-    toast.info("Instância removida.");
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("zabbix_instances").delete().eq("id", id);
+    if (error) {
+      toast.error(`Erro ao remover: ${error.message}`);
+    } else {
+      toast.info("Instância removida.");
+      loadInstances();
+    }
   };
 
   const resetForm = () => {
-    setForm(emptyZabbix);
+    setForm(emptyForm);
     setEditId(null);
     setShowForm(false);
     setShowToken(false);
@@ -115,12 +185,20 @@ const ZabbixConfigPage = () => {
     return value && typeof value === "string" && value.trim().length > 0 && !validation.errors[field];
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold font-mono neon-text">Configuração Zabbix</h1>
-          <p className="text-muted-foreground text-sm">Gerencie instâncias Zabbix • Criptografia AES-256 ativa</p>
+          <p className="text-muted-foreground text-sm">Gerencie instâncias Zabbix • Integração real via API</p>
         </div>
         <div className="flex gap-3">
           <button onClick={() => syncStatus.runSync()} disabled={syncStatus.isRunning} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-info/10 text-info hover:bg-info/20 transition-colors disabled:opacity-50">
@@ -167,7 +245,7 @@ const ZabbixConfigPage = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <h2 className="font-semibold font-mono text-sm">{editId ? "Editar" : "Nova"} Instância Zabbix</h2>
-              <span title="Criptografia AES-256"><Shield className="w-4 h-4 text-primary" /></span>
+              <span title="Integração real via API"><Shield className="w-4 h-4 text-primary" /></span>
             </div>
             <button onClick={resetForm} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
@@ -198,7 +276,7 @@ const ZabbixConfigPage = () => {
                 type={showToken ? "text" : "password"}
                 value={form.apiToken}
                 onChange={(e) => setForm({ ...form, apiToken: e.target.value })}
-                placeholder="Token criptografado com AES-256"
+                placeholder="Token ou senha da API Zabbix"
                 className={`bg-secondary border-border ${fieldOk("apiToken") ? "border-success/40" : validation.errors.apiToken ? "border-destructive/60" : ""}`}
               />
               <div className="flex items-center justify-between mt-1">
@@ -210,7 +288,6 @@ const ZabbixConfigPage = () => {
             </div>
           </div>
 
-          {/* Validation summary */}
           <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
             <div className="flex items-center gap-2 text-xs">
               {Object.keys(validation.errors).length === 0 && form.url ? (
@@ -232,7 +309,7 @@ const ZabbixConfigPage = () => {
       {/* Instance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {instances.map((z, i) => {
-          const st = statusIcons[z.status];
+          const st = statusIcons[z.status] || statusIcons.disconnected;
           const Icon = st.icon;
           return (
             <div key={z.id} className="glass rounded-lg p-5 animate-slide-up" style={{ animationDelay: `${i * 50}ms` }}>
@@ -247,15 +324,14 @@ const ZabbixConfigPage = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span title="Criptografado"><Shield className="w-3.5 h-3.5 text-primary" /></span>
                   <span className={`text-xs font-mono ${st.color}`}>{st.label}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3 mb-4 text-xs">
                 <div><span className="text-muted-foreground block">Versão</span><span className="font-mono">{z.version || "—"}</span></div>
-                <div><span className="text-muted-foreground block">Hosts</span><span className="font-mono">{z.hostsMonitored}</span></div>
-                <div><span className="text-muted-foreground block">Último Sync</span><span className="font-mono">{new Date(z.lastSync).toLocaleTimeString("pt-BR")}</span></div>
+                <div><span className="text-muted-foreground block">Hosts</span><span className="font-mono">{z.hosts_monitored || 0}</span></div>
+                <div><span className="text-muted-foreground block">Último Sync</span><span className="font-mono">{z.last_sync ? new Date(z.last_sync).toLocaleTimeString("pt-BR") : "—"}</span></div>
               </div>
 
               <div className="flex gap-2 pt-3 border-t border-border/50">
@@ -277,6 +353,7 @@ const ZabbixConfigPage = () => {
       {instances.length === 0 && (
         <div className="glass rounded-lg p-10 text-center">
           <p className="text-muted-foreground text-sm">Nenhuma instância Zabbix configurada</p>
+          <p className="text-muted-foreground text-xs mt-2">Clique em "Nova Instância" para conectar ao seu servidor Zabbix</p>
         </div>
       )}
     </div>
