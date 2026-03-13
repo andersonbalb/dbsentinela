@@ -40,7 +40,7 @@ export function exportBackupsCSV(jobs: BackupJob[]) {
 export function exportMetricsCSV(metrics: ZabbixHostMetric[]) {
   const header = "Host ID,Hostname,CPU (%),Memória (%),Disco (%),Status,Última Verificação\n";
   const rows = metrics.map((m) =>
-    [m.hostId, m.hostname, m.cpu, m.memory, m.disk, m.status, formatDate(m.lastCheck)].join(",")
+    [m.host_id, m.hostname, m.cpu, m.memory, m.disk, m.status, formatDate(m.last_check)].join(",")
   ).join("\n");
   downloadFile(header + rows, `metricas_zabbix_${new Date().toISOString().split("T")[0]}.csv`, "text/csv");
 }
@@ -98,7 +98,7 @@ export function exportBackupsPDF(jobs: BackupJob[]) {
 
 export function exportMetricsPDF(metrics: ZabbixHostMetric[]) {
   const headers = ["Hostname", "CPU (%)", "Memória (%)", "Disco (%)", "Status", "Última Verificação"];
-  const rows = metrics.map((m) => [m.hostname, `${m.cpu}%`, `${m.memory}%`, `${m.disk}%`, m.status.toUpperCase(), formatDate(m.lastCheck)]);
+  const rows = metrics.map((m) => [m.hostname, `${m.cpu}%`, `${m.memory}%`, `${m.disk}%`, m.status.toUpperCase(), formatDate(m.last_check)]);
   const w = window.open("", "_blank");
   if (w) { w.document.write(generatePDFHTML("Relatório de Métricas Zabbix", headers, rows)); w.document.close(); w.print(); }
 }

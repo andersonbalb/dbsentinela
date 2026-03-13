@@ -484,13 +484,13 @@ const ReportsPage = () => {
                     </TableHeader>
                     <TableBody>
                       {zabbixMetrics.map((m) => (
-                        <TableRow key={m.hostId}>
+                        <TableRow key={m.host_id}>
                           <TableCell className="font-mono text-xs">{m.hostname}</TableCell>
                           <TableCell className="font-mono">{m.cpu}%</TableCell>
                           <TableCell className="font-mono">{m.memory}%</TableCell>
                           <TableCell className="font-mono">{m.disk}%</TableCell>
                           <TableCell><Badge className={m.status === "online" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}>{m.status}</Badge></TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{new Date(m.lastCheck).toLocaleString("pt-BR")}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{new Date(m.last_check).toLocaleString("pt-BR")}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

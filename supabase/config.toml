@@ -1,1 +1,4 @@
 project_id = "pydboahnxngiqlhmmuqo"
+
+[functions.zabbix-proxy]
+verify_jwt = false
