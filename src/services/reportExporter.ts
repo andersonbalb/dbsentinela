@@ -98,7 +98,7 @@ export function exportBackupsPDF(jobs: BackupJob[]) {
 
 export function exportMetricsPDF(metrics: ZabbixHostMetric[]) {
   const headers = ["Hostname", "CPU (%)", "Memória (%)", "Disco (%)", "Status", "Última Verificação"];
-  const rows = metrics.map((m) => [m.hostname, `${m.cpu}%`, `${m.memory}%`, `${m.disk}%`, m.status.toUpperCase(), formatDate(m.lastCheck)]);
+  const rows = metrics.map((m) => [m.hostname, `${m.cpu}%`, `${m.memory}%`, `${m.disk}%`, m.status.toUpperCase(), formatDate(m.last_check)]);
   const w = window.open("", "_blank");
   if (w) { w.document.write(generatePDFHTML("Relatório de Métricas Zabbix", headers, rows)); w.document.close(); w.print(); }
 }
