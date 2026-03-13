@@ -14,7 +14,98 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      zabbix_host_metrics: {
+        Row: {
+          cpu: number | null
+          created_at: string
+          disk: number | null
+          host_id: string
+          hostname: string
+          id: string
+          instance_id: string
+          last_check: string | null
+          memory: number | null
+          status: string | null
+        }
+        Insert: {
+          cpu?: number | null
+          created_at?: string
+          disk?: number | null
+          host_id: string
+          hostname: string
+          id?: string
+          instance_id: string
+          last_check?: string | null
+          memory?: number | null
+          status?: string | null
+        }
+        Update: {
+          cpu?: number | null
+          created_at?: string
+          disk?: number | null
+          host_id?: string
+          hostname?: string
+          id?: string
+          instance_id?: string
+          last_check?: string | null
+          memory?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zabbix_host_metrics_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "zabbix_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zabbix_instances: {
+        Row: {
+          api_token: string
+          api_user: string
+          created_at: string
+          hosts_monitored: number | null
+          id: string
+          last_sync: string | null
+          name: string
+          status: string
+          updated_at: string
+          url: string
+          user_id: string
+          version: string | null
+        }
+        Insert: {
+          api_token: string
+          api_user: string
+          created_at?: string
+          hosts_monitored?: number | null
+          id?: string
+          last_sync?: string | null
+          name: string
+          status?: string
+          updated_at?: string
+          url: string
+          user_id: string
+          version?: string | null
+        }
+        Update: {
+          api_token?: string
+          api_user?: string
+          created_at?: string
+          hosts_monitored?: number | null
+          id?: string
+          last_sync?: string | null
+          name?: string
+          status?: string
+          updated_at?: string
+          url?: string
+          user_id?: string
+          version?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
