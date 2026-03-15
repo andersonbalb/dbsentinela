@@ -283,6 +283,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Anti-SSRF: validate URL before any outbound request
+    const urlCheck = validateZabbixUrl(url);
+    if (!urlCheck.valid) {
+      return new Response(
+        JSON.stringify({ error: urlCheck.error }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     let result: unknown;
 
     switch (action) {
