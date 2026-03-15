@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { validateZabbixConfig, testZabbixConnection, ZabbixValidationResult } from "@/services/zabbixIntegration";
+import { validateZabbixConfig, testZabbixConnection, testZabbixConnectionById, ZabbixValidationResult } from "@/services/zabbixIntegration";
 import { useZabbixSync } from "@/hooks/useZabbixSync";
 import {
   Plus, Trash2, Edit2, X, Save, RefreshCw, Wifi, WifiOff, AlertCircle,
@@ -15,7 +15,6 @@ interface ZabbixInstanceDB {
   name: string;
   url: string;
   api_user: string;
-  api_token: string;
   version: string | null;
   status: string;
   last_sync: string | null;
@@ -47,7 +46,7 @@ const ZabbixConfigPage = () => {
   const loadInstances = useCallback(async () => {
     const { data, error } = await supabase
       .from("zabbix_instances")
-      .select("*")
+      .select("id, name, url, api_user, version, status, last_sync, hosts_monitored")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -130,7 +129,8 @@ const ZabbixConfigPage = () => {
 
   const handleTestConnection = async (z: ZabbixInstanceDB) => {
     setIsTesting(true);
-    const result = await testZabbixConnection({ url: z.url, apiUser: z.api_user, apiToken: z.api_token });
+    // Use instance_id — credentials are fetched server-side
+    const result = await testZabbixConnectionById(z.id);
     if (result.success) {
       await supabase
         .from("zabbix_instances")
@@ -144,14 +144,14 @@ const ZabbixConfigPage = () => {
       toast.success("Conexão estabelecida com sucesso!", { icon: <CheckCircle2 className="w-4 h-4 text-success" /> });
     } else {
       await supabase.from("zabbix_instances").update({ status: "error" }).eq("id", z.id);
-      toast.error(`Falha na conexão: ${result.error}`, { icon: <XCircle className="w-4 h-4 text-destructive" /> });
+      toast.error("Falha na conexão. Verifique as credenciais.", { icon: <XCircle className="w-4 h-4 text-destructive" /> });
     }
     loadInstances();
     setIsTesting(false);
   };
 
   const handleEdit = (z: ZabbixInstanceDB) => {
-    setForm({ name: z.name, url: z.url, apiUser: z.api_user, apiToken: z.api_token, version: z.version || "" });
+    setForm({ name: z.name, url: z.url, apiUser: z.api_user, apiToken: "", version: z.version || "" });
     setEditId(z.id);
     setShowForm(true);
   };

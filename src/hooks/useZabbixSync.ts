@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { syncZabbixMetrics, ZabbixSyncResult } from "@/services/zabbixIntegration";
+import { syncZabbixMetricsById, ZabbixSyncResult } from "@/services/zabbixIntegration";
 
 export interface SyncStatus {
   isRunning: boolean;
@@ -10,15 +10,6 @@ export interface SyncStatus {
   totalHosts: number;
   totalMetrics: number;
   errors: string[];
-}
-
-interface ZabbixInstanceRow {
-  id: string;
-  url: string;
-  api_user: string;
-  api_token: string;
-  version: string | null;
-  status: string;
 }
 
 interface UseZabbixSyncOptions {
@@ -39,10 +30,9 @@ export const useZabbixSync = ({ intervalMinutes = 5, enabled = true }: UseZabbix
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const runSync = useCallback(async () => {
-    // Fetch connected instances from DB
     const { data: instances, error: fetchError } = await supabase
       .from("zabbix_instances")
-      .select("id, url, api_user, api_token, version, status")
+      .select("id, url, status")
       .eq("status", "connected");
 
     if (fetchError || !instances || instances.length === 0) return;
@@ -52,18 +42,13 @@ export const useZabbixSync = ({ intervalMinutes = 5, enabled = true }: UseZabbix
     const results: ZabbixSyncResult[] = [];
     const errors: string[] = [];
 
-    for (const inst of instances as ZabbixInstanceRow[]) {
+    for (const inst of instances) {
       try {
-        const result = await syncZabbixMetrics({
-          url: inst.url,
-          apiUser: inst.api_user,
-          apiToken: inst.api_token,
-          version: inst.version || undefined,
-        });
+        // Use instance_id — credentials fetched server-side
+        const result = await syncZabbixMetricsById(inst.id);
         results.push(result);
 
         if (result.success && result.metrics) {
-          // Save metrics to DB
           for (const metric of result.metrics) {
             await supabase.from("zabbix_host_metrics").insert({
               instance_id: inst.id,
@@ -77,7 +62,6 @@ export const useZabbixSync = ({ intervalMinutes = 5, enabled = true }: UseZabbix
             });
           }
 
-          // Update instance
           await supabase
             .from("zabbix_instances")
             .update({
@@ -109,11 +93,8 @@ export const useZabbixSync = ({ intervalMinutes = 5, enabled = true }: UseZabbix
 
   useEffect(() => {
     if (!enabled) return;
-
     runSync();
-
     intervalRef.current = setInterval(runSync, intervalMinutes * 60 * 1000);
-
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
