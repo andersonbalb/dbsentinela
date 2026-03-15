@@ -1,5 +1,6 @@
 /**
  * Zabbix Integration Service - Real Zabbix API via Edge Function proxy
+ * Credentials are now fetched server-side — only instance_id is sent for existing instances.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -63,7 +64,10 @@ export function validateZabbixConfig(config: ZabbixConnectionConfig): ZabbixVali
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
-// Real Zabbix API calls via edge function
+/**
+ * Test connection for an UNSAVED instance (inline credentials sent once for testing).
+ * For saved instances, use testZabbixConnectionById.
+ */
 export async function testZabbixConnection(
   config: ZabbixConnectionConfig
 ): Promise<{ success: boolean; version?: string; hostsCount?: number; error?: string }> {
@@ -82,32 +86,40 @@ export async function testZabbixConnection(
   });
 
   if (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: "Erro ao testar conexão" };
   }
-
   return data;
 }
 
-export async function syncZabbixMetrics(
-  config: ZabbixConnectionConfig
-): Promise<ZabbixSyncResult> {
-  const validation = validateZabbixConfig(config);
-  if (!validation.valid) {
-    return {
-      success: false,
-      hostsFound: 0,
-      metricsCollected: 0,
-      timestamp: new Date().toISOString(),
-      error: "Config inválida",
-    };
-  }
+/**
+ * Test connection for a SAVED instance (credentials fetched server-side).
+ */
+export async function testZabbixConnectionById(
+  instanceId: string
+): Promise<{ success: boolean; version?: string; hostsCount?: number; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("zabbix-proxy", {
+    body: {
+      action: "test",
+      instance_id: instanceId,
+    },
+  });
 
+  if (error) {
+    return { success: false, error: "Erro ao testar conexão" };
+  }
+  return data;
+}
+
+/**
+ * Sync metrics for a SAVED instance (credentials fetched server-side).
+ */
+export async function syncZabbixMetricsById(
+  instanceId: string
+): Promise<ZabbixSyncResult> {
   const { data, error } = await supabase.functions.invoke("zabbix-proxy", {
     body: {
       action: "sync",
-      url: config.url,
-      api_user: config.apiUser,
-      api_token: config.apiToken,
+      instance_id: instanceId,
     },
   });
 
@@ -117,18 +129,8 @@ export async function syncZabbixMetrics(
       hostsFound: 0,
       metricsCollected: 0,
       timestamp: new Date().toISOString(),
-      error: error.message,
+      error: "Erro ao sincronizar métricas",
     };
   }
-
   return data;
-}
-
-// Legacy encryption functions (kept for backwards compatibility)
-export async function encryptToken(plaintext: string): Promise<string> {
-  return plaintext; // Tokens are now stored server-side with RLS protection
-}
-
-export async function decryptToken(encrypted: string): Promise<string> {
-  return encrypted;
 }
