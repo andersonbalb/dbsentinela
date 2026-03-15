@@ -1,24 +1,45 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Database, Lock, Eye, EyeOff } from "lucide-react";
+import { Database, Lock, Eye, EyeOff, UserPlus, LogIn } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, signup } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSignup, setIsSignup] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setInfo("");
     setLoading(true);
-    const ok = await login(email, password);
+
+    if (isSignup) {
+      if (password.length < 6) {
+        setError("A senha deve ter pelo menos 6 caracteres.");
+        setLoading(false);
+        return;
+      }
+      const result = await signup(email, password);
+      if (!result.success) {
+        setError(result.error || "Erro ao criar conta.");
+      } else if (result.needsConfirmation) {
+        setInfo("Conta criada! Verifique seu email para confirmar o cadastro.");
+      }
+    } else {
+      const result = await login(email, password);
+      if (!result.success) {
+        setError(result.error || "Credenciais inválidas.");
+      }
+    }
+
     setLoading(false);
-    if (!ok) setError("Credenciais inválidas. Tente novamente.");
   };
 
   return (
@@ -40,6 +61,24 @@ const LoginPage = () => {
             <p className="text-muted-foreground text-sm mt-1">Database Operations Center</p>
           </div>
 
+          {/* Tabs */}
+          <div className="flex mb-6 border-b border-border">
+            <button
+              type="button"
+              onClick={() => { setIsSignup(false); setError(""); setInfo(""); }}
+              className={`flex-1 pb-2 text-sm font-medium transition-colors ${!isSignup ? "text-primary border-b-2 border-primary" : "text-muted-foreground"}`}
+            >
+              <LogIn className="w-4 h-4 inline mr-1.5" />Login
+            </button>
+            <button
+              type="button"
+              onClick={() => { setIsSignup(true); setError(""); setInfo(""); }}
+              className={`flex-1 pb-2 text-sm font-medium transition-colors ${isSignup ? "text-primary border-b-2 border-primary" : "text-muted-foreground"}`}
+            >
+              <UserPlus className="w-4 h-4 inline mr-1.5" />Cadastro
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="text-sm text-muted-foreground mb-1.5 block">Email</label>
@@ -47,7 +86,7 @@ const LoginPage = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@empresa.com"
+                placeholder="seu@email.com"
                 required
                 className="bg-secondary border-border focus:border-primary"
               />
@@ -62,6 +101,7 @@ const LoginPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
+                  minLength={6}
                   className="bg-secondary border-border focus:border-primary pr-10"
                 />
                 <button
@@ -72,10 +112,16 @@ const LoginPage = () => {
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {isSignup && (
+                <p className="text-xs text-muted-foreground mt-1">Mínimo 6 caracteres</p>
+              )}
             </div>
 
             {error && (
               <p className="text-destructive text-sm animate-slide-up">{error}</p>
+            )}
+            {info && (
+              <p className="text-success text-sm animate-slide-up">{info}</p>
             )}
 
             <Button
@@ -85,16 +131,14 @@ const LoginPage = () => {
             >
               {loading ? (
                 <Lock className="w-4 h-4 animate-spin-slow mr-2" />
+              ) : isSignup ? (
+                <UserPlus className="w-4 h-4 mr-2" />
               ) : (
                 <Lock className="w-4 h-4 mr-2" />
               )}
-              {loading ? "Autenticando..." : "Acessar Painel"}
+              {loading ? "Processando..." : isSignup ? "Criar Conta" : "Acessar Painel"}
             </Button>
           </form>
-
-          <p className="text-center text-muted-foreground text-xs mt-6">
-            Use qualquer email e senha (mín. 4 caracteres)
-          </p>
         </div>
       </div>
     </div>

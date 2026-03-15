@@ -99,7 +99,7 @@ const ZabbixConfigPage = () => {
         .eq("id", editId);
 
       if (error) {
-        toast.error(`Erro ao atualizar: ${error.message}`);
+        toast.error("Erro ao atualizar instância. Tente novamente.");
       } else {
         toast.success("Instância Zabbix atualizada!", { icon: <Shield className="w-4 h-4 text-success" /> });
       }
