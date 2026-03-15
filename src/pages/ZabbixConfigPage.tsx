@@ -46,7 +46,7 @@ const ZabbixConfigPage = () => {
   const loadInstances = useCallback(async () => {
     const { data, error } = await supabase
       .from("zabbix_instances")
-      .select("*")
+      .select("id, name, url, api_user, version, status, last_sync, hosts_monitored")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
