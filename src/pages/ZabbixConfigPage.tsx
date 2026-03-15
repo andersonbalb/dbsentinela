@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { validateZabbixConfig, testZabbixConnection, ZabbixValidationResult } from "@/services/zabbixIntegration";
+import { validateZabbixConfig, testZabbixConnection, testZabbixConnectionById, ZabbixValidationResult } from "@/services/zabbixIntegration";
 import { useZabbixSync } from "@/hooks/useZabbixSync";
 import {
   Plus, Trash2, Edit2, X, Save, RefreshCw, Wifi, WifiOff, AlertCircle,
