@@ -42,8 +42,8 @@ export function validateZabbixConfig(config: ZabbixConnectionConfig): ZabbixVali
 
   if (!config.url || config.url.trim() === "") {
     errors.url = "URL é obrigatória";
-  } else if (!/^https?:\/\/.+/.test(config.url)) {
-    errors.url = "URL deve começar com http:// ou https://";
+  } else if (!/^https:\/\/.+/.test(config.url)) {
+    errors.url = "URL deve usar HTTPS (https://...)";
   } else if (config.url.endsWith("/")) {
     errors.url = "URL não deve terminar com /";
   }
