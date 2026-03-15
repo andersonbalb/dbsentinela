@@ -159,7 +159,7 @@ const ZabbixConfigPage = () => {
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("zabbix_instances").delete().eq("id", id);
     if (error) {
-      toast.error(`Erro ao remover: ${error.message}`);
+      toast.error("Erro ao remover instância. Tente novamente.");
     } else {
       toast.info("Instância removida.");
       loadInstances();
