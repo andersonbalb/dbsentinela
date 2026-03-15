@@ -14,6 +14,40 @@ interface ZabbixApiRequest {
   api_token: string;
 }
 
+function isPrivateOrReservedHost(hostname: string): boolean {
+  // Block localhost variants
+  if (/^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|\[::1\]|::1)$/i.test(hostname)) {
+    return true;
+  }
+  // Block private IPv4 ranges
+  const ipv4Match = hostname.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (ipv4Match) {
+    const [, a, b] = ipv4Match.map(Number);
+    if (a === 10) return true;                          // 10.0.0.0/8
+    if (a === 172 && b >= 16 && b <= 31) return true;   // 172.16.0.0/12
+    if (a === 192 && b === 168) return true;             // 192.168.0.0/16
+    if (a === 169 && b === 254) return true;             // 169.254.0.0/16 (link-local / cloud metadata)
+    if (a === 0) return true;                            // 0.0.0.0/8
+  }
+  return false;
+}
+
+function validateZabbixUrl(rawUrl: string): { valid: boolean; error?: string } {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return { valid: false, error: "URL inválida" };
+  }
+  if (parsed.protocol !== "https:") {
+    return { valid: false, error: "Apenas HTTPS é permitido para conexões Zabbix" };
+  }
+  if (isPrivateOrReservedHost(parsed.hostname)) {
+    return { valid: false, error: "URLs apontando para redes internas/privadas não são permitidas" };
+  }
+  return { valid: true };
+}
+
 async function zabbixApiCall(
   url: string,
   method: string,
