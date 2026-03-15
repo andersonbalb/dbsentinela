@@ -15,7 +15,6 @@ interface ZabbixInstanceDB {
   name: string;
   url: string;
   api_user: string;
-  api_token: string;
   version: string | null;
   status: string;
   last_sync: string | null;
