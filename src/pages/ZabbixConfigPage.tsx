@@ -151,7 +151,7 @@ const ZabbixConfigPage = () => {
   };
 
   const handleEdit = (z: ZabbixInstanceDB) => {
-    setForm({ name: z.name, url: z.url, apiUser: z.api_user, apiToken: z.api_token, version: z.version || "" });
+    setForm({ name: z.name, url: z.url, apiUser: z.api_user, apiToken: "", version: z.version || "" });
     setEditId(z.id);
     setShowForm(true);
   };
