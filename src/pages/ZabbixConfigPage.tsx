@@ -116,7 +116,7 @@ const ZabbixConfigPage = () => {
         });
 
       if (error) {
-        toast.error(`Erro ao cadastrar: ${error.message}`);
+        toast.error("Erro ao cadastrar instância. Tente novamente.");
       } else {
         toast.success("Instância Zabbix cadastrada!", { icon: <Shield className="w-4 h-4 text-success" /> });
       }
