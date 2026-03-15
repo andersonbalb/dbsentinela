@@ -99,7 +99,7 @@ const ZabbixConfigPage = () => {
         .eq("id", editId);
 
       if (error) {
-        toast.error(`Erro ao atualizar: ${error.message}`);
+        toast.error("Erro ao atualizar instância. Tente novamente.");
       } else {
         toast.success("Instância Zabbix atualizada!", { icon: <Shield className="w-4 h-4 text-success" /> });
       }
@@ -116,7 +116,7 @@ const ZabbixConfigPage = () => {
         });
 
       if (error) {
-        toast.error(`Erro ao cadastrar: ${error.message}`);
+        toast.error("Erro ao cadastrar instância. Tente novamente.");
       } else {
         toast.success("Instância Zabbix cadastrada!", { icon: <Shield className="w-4 h-4 text-success" /> });
       }
@@ -159,7 +159,7 @@ const ZabbixConfigPage = () => {
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("zabbix_instances").delete().eq("id", id);
     if (error) {
-      toast.error(`Erro ao remover: ${error.message}`);
+      toast.error("Erro ao remover instância. Tente novamente.");
     } else {
       toast.info("Instância removida.");
       loadInstances();
