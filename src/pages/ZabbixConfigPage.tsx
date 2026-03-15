@@ -130,7 +130,8 @@ const ZabbixConfigPage = () => {
 
   const handleTestConnection = async (z: ZabbixInstanceDB) => {
     setIsTesting(true);
-    const result = await testZabbixConnection({ url: z.url, apiUser: z.api_user, apiToken: z.api_token });
+    // Use instance_id — credentials are fetched server-side
+    const result = await testZabbixConnectionById(z.id);
     if (result.success) {
       await supabase
         .from("zabbix_instances")
@@ -144,7 +145,7 @@ const ZabbixConfigPage = () => {
       toast.success("Conexão estabelecida com sucesso!", { icon: <CheckCircle2 className="w-4 h-4 text-success" /> });
     } else {
       await supabase.from("zabbix_instances").update({ status: "error" }).eq("id", z.id);
-      toast.error(`Falha na conexão: ${result.error}`, { icon: <XCircle className="w-4 h-4 text-destructive" /> });
+      toast.error("Falha na conexão. Verifique as credenciais.", { icon: <XCircle className="w-4 h-4 text-destructive" /> });
     }
     loadInstances();
     setIsTesting(false);
